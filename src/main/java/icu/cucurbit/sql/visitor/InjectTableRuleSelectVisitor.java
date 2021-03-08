@@ -32,7 +32,7 @@ public class InjectTableRuleSelectVisitor implements SelectVisitor {
         InjectTableRuleFromItemVisitor fromItemVisitor = new InjectTableRuleFromItemVisitor(this);
         fromItem.accept(fromItemVisitor);
 
-        if (fromItemVisitor.findTable()) {
+        if (fromItemVisitor.foundTable()) {
             injectWhereCondition(plainSelect, fromItemVisitor.getTable());
         }
 
@@ -46,7 +46,7 @@ public class InjectTableRuleSelectVisitor implements SelectVisitor {
             InjectTableRuleFromItemVisitor joinItemVisitor = new InjectTableRuleFromItemVisitor(this);
             joinItem.accept(joinItemVisitor);
 
-            if (joinItemVisitor.findTable()) {
+            if (joinItemVisitor.foundTable()) {
                 injectWhereCondition(plainSelect, joinItemVisitor.getTable());
             }
         }

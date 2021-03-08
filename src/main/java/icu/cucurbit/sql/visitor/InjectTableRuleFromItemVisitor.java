@@ -52,7 +52,7 @@ public class InjectTableRuleFromItemVisitor implements FromItemVisitor {
     }
 
 
-    public boolean findTable() {
+    public boolean foundTable() {
         return Objects.nonNull(table);
     }
 
