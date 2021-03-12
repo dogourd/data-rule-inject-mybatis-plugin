@@ -50,6 +50,7 @@ public class InjectTableRuleSelectVisitor implements SelectVisitor {
                 injectWhereCondition(plainSelect, joinItemVisitor.getTable());
             }
         }
+
     }
 
     @Override
@@ -74,13 +75,13 @@ public class InjectTableRuleSelectVisitor implements SelectVisitor {
 
     private void injectWhereCondition(PlainSelect plainSelect, Table table) {
         String tableName = table.getName();
-        String aliasName = Optional.ofNullable(table.getAlias()).map(Alias::getName).orElse(null);
+        String aliasName = Optional.ofNullable(table.getAlias()).map(Alias::getName).orElse(tableName);
 
         for (TableRule tableRule : rules) {
             Expression originCondition = plainSelect.getWhere();
             String matchTable = tableRule.getTableName();
             if (tableName.equalsIgnoreCase(matchTable)) {
-                tableRule.setTableName(Objects.toString(aliasName, tableName));
+                tableRule.setTableName(aliasName);
                 String expressionStr = tableRule.toExpressionString();
                 Expression attachExpression;
                 try {

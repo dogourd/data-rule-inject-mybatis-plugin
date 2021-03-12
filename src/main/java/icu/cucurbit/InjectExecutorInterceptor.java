@@ -13,19 +13,20 @@ import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.mapping.MappedStatement;
 import org.apache.ibatis.mapping.SqlSource;
 import org.apache.ibatis.plugin.*;
+import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
 
+import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
 
-@SuppressWarnings("rawtypes")
 @Intercepts({
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class}),
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class}),
 })
-public class InjectInterceptor implements Interceptor {
+public class InjectExecutorInterceptor implements Interceptor {
 
     private static final String INJECT_SUFFIX = "_inject_rule";
 
@@ -52,8 +53,7 @@ public class InjectInterceptor implements Interceptor {
             injectSelectSql(statement, injectVisitor);
 
             String newSql = statement.toString();
-            BoundSql newBoundSql = new BoundSql(ms.getConfiguration(), newSql,
-                    boundSql.getParameterMappings(), boundSql.getParameterObject());
+            BoundSql newBoundSql = copyBoundSql(newSql, ms.getConfiguration(), boundSql);
 
             String newMsId = ms.getId() + INJECT_SUFFIX;
             MappedStatement newStatement = copyMappedStatement(ms, new DirectSqlSource(newBoundSql), newMsId);
@@ -100,7 +100,7 @@ public class InjectInterceptor implements Interceptor {
         builder.fetchSize(oldMs.getFetchSize());
         builder.statementType(oldMs.getStatementType());
         builder.keyGenerator(oldMs.getKeyGenerator());
-        builder.keyProperty(String.join(",", oldMs.getKeyProperties()));
+        builder.keyProperty(oldMs.getKeyProperties() == null ? null : String.join(",", oldMs.getKeyProperties()));
         builder.timeout(oldMs.getTimeout());
         builder.parameterMap(oldMs.getParameterMap());
         builder.resultMaps(oldMs.getResultMaps());
@@ -110,6 +110,28 @@ public class InjectInterceptor implements Interceptor {
         builder.useCache(oldMs.isUseCache());
 
         return builder.build();
+    }
+
+    private BoundSql copyBoundSql(String newSql, Configuration configuration, BoundSql oldBoundSql) throws NoSuchFieldException, IllegalAccessException {
+
+        BoundSql newBoundSql = new BoundSql(
+                configuration, newSql, oldBoundSql.getParameterMappings(), oldBoundSql.getParameterObject()
+        );
+        // reflect copy additionalParameters and metaParameters
+
+        Class<? extends BoundSql> clz = oldBoundSql.getClass();
+
+        Field additionalParametersField = clz.getDeclaredField("additionalParameters");
+        additionalParametersField.setAccessible(true);
+        Object additionalParameters = additionalParametersField.get(oldBoundSql);
+        additionalParametersField.set(newBoundSql, additionalParameters);
+
+        Field metaParametersField = clz.getDeclaredField("metaParameters");
+        metaParametersField.setAccessible(true);
+        Object metaParameters = metaParametersField.get(oldBoundSql);
+        metaParametersField.set(newBoundSql, metaParameters);
+
+        return newBoundSql;
     }
 
     public static class DirectSqlSource implements SqlSource {
