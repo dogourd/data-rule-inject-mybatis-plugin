@@ -1,7 +1,7 @@
 package icu.cucurbit;
 
 import icu.cucurbit.sql.TableRule;
-import icu.cucurbit.sql.visitor.InjectTableRuleSelectVisitor;
+import icu.cucurbit.sql.visitor.InjectSelectVisitor;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
@@ -25,6 +25,8 @@ public class InjectTest {
     public void setup() {
         rules = new ArrayList<>();
         rules.add(new TableRule("users", "del_flag", "=", 0));
+        rules.add(new TableRule("user_role", "id", "=", 0));
+        RuleContext.setRules(rules);
     }
 
     @Test
@@ -63,12 +65,21 @@ public class InjectTest {
         injectAndPrintSql(sql, rules);
     }
 
+    @Test
+    public void testWhereSubQuery() throws JSQLParserException {
+        String sql = "select * from user_role where user_id in (select * from users)";
+        injectAndPrintSql(sql, rules);
+    }
+
+
+
+
 
     private void injectAndPrintSql(String selectSql, List<TableRule> rules) throws JSQLParserException {
         Statement statement = CCJSqlParserUtil.parse(selectSql);
         Select select = (Select) statement;
 
-        InjectTableRuleSelectVisitor visitor = new InjectTableRuleSelectVisitor(rules);
+        InjectSelectVisitor visitor = new InjectSelectVisitor();
 
         List<WithItem> withItems = select.getWithItemsList();
         if (withItems != null && !withItems.isEmpty()) {

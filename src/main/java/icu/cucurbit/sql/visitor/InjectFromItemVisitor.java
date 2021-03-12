@@ -5,13 +5,12 @@ import net.sf.jsqlparser.statement.select.*;
 
 import java.util.Objects;
 
-public class InjectTableRuleFromItemVisitor implements FromItemVisitor {
+public class InjectFromItemVisitor implements FromItemVisitor {
 
     private Table table;
-    private final InjectTableRuleSelectVisitor injectTableRuleSelectVisitor;
 
-    public InjectTableRuleFromItemVisitor(InjectTableRuleSelectVisitor selectVisitor) {
-        this.injectTableRuleSelectVisitor = selectVisitor;
+    public InjectFromItemVisitor() {
+
     }
 
 
@@ -23,7 +22,7 @@ public class InjectTableRuleFromItemVisitor implements FromItemVisitor {
     @Override
     public void visit(SubSelect subSelect) {
         SelectBody selectBody = subSelect.getSelectBody();
-        selectBody.accept(injectTableRuleSelectVisitor);
+        selectBody.accept(new InjectSelectVisitor());
     }
 
     @Override

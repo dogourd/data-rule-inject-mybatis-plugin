@@ -1,7 +1,7 @@
 package icu.cucurbit;
 
 import icu.cucurbit.sql.TableRule;
-import icu.cucurbit.sql.visitor.InjectTableRuleSelectVisitor;
+import icu.cucurbit.sql.visitor.InjectSelectVisitor;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.select.Select;
@@ -45,7 +45,7 @@ public class InjectExecutorInterceptor implements Interceptor {
 
         List<TableRule> rules = RuleContext.getRules();
         if (Objects.nonNull(rules) && !rules.isEmpty()) {
-            InjectTableRuleSelectVisitor injectVisitor = new InjectTableRuleSelectVisitor(rules);
+            InjectSelectVisitor injectVisitor = new InjectSelectVisitor();
             String sql = boundSql.getSql();
             Statement statement = CCJSqlParserUtil.parse(sql);
 
@@ -76,7 +76,7 @@ public class InjectExecutorInterceptor implements Interceptor {
     }
 
 
-    private void injectSelectSql(Statement statement, InjectTableRuleSelectVisitor injectVisitor) {
+    private void injectSelectSql(Statement statement, InjectSelectVisitor injectVisitor) {
         Select select = (Select) statement;
         // with.
         List<WithItem> withItems = select.getWithItemsList();

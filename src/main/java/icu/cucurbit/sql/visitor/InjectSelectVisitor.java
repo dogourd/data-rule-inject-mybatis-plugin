@@ -1,5 +1,6 @@
 package icu.cucurbit.sql.visitor;
 
+import icu.cucurbit.RuleContext;
 import icu.cucurbit.sql.TableRule;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Alias;
@@ -14,41 +15,42 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-public class InjectTableRuleSelectVisitor implements SelectVisitor {
+public class InjectSelectVisitor implements SelectVisitor {
 
-    private final List<TableRule> rules;
-
-    public InjectTableRuleSelectVisitor(List<TableRule> rules) {
-        this.rules = rules;
+    public InjectSelectVisitor() {
     }
 
     @Override
     public void visit(PlainSelect plainSelect) {
         // from.
         FromItem fromItem = plainSelect.getFromItem();
-        if (Objects.isNull(fromItem)) {
-            return;
-        }
-        InjectTableRuleFromItemVisitor fromItemVisitor = new InjectTableRuleFromItemVisitor(this);
-        fromItem.accept(fromItemVisitor);
+        if (Objects.nonNull(fromItem)) {
+            InjectFromItemVisitor fromItemVisitor = new InjectFromItemVisitor();
+            fromItem.accept(fromItemVisitor);
 
-        if (fromItemVisitor.foundTable()) {
-            injectWhereCondition(plainSelect, fromItemVisitor.getTable());
+            if (fromItemVisitor.foundTable()) {
+                injectWhereCondition(plainSelect, fromItemVisitor.getTable());
+            }
         }
 
         // join.
         List<Join> joins = plainSelect.getJoins();
-        if (Objects.isNull(joins)) {
-            return;
-        }
-        for (Join join : joins) {
-            FromItem joinItem = join.getRightItem();
-            InjectTableRuleFromItemVisitor joinItemVisitor = new InjectTableRuleFromItemVisitor(this);
-            joinItem.accept(joinItemVisitor);
+        if (Objects.nonNull(joins)) {
+            for (Join join : joins) {
+                FromItem joinItem = join.getRightItem();
+                InjectFromItemVisitor joinItemVisitor = new InjectFromItemVisitor();
+                joinItem.accept(joinItemVisitor);
 
-            if (joinItemVisitor.foundTable()) {
-                injectWhereCondition(plainSelect, joinItemVisitor.getTable());
+                if (joinItemVisitor.foundTable()) {
+                    injectWhereCondition(plainSelect, joinItemVisitor.getTable());
+                }
             }
+        }
+
+        // where
+        Expression where = plainSelect.getWhere();
+        if (where != null) {
+            where.accept(new InjectExpressionVisitor());
         }
 
     }
@@ -77,8 +79,10 @@ public class InjectTableRuleSelectVisitor implements SelectVisitor {
         String tableName = table.getName();
         String aliasName = Optional.ofNullable(table.getAlias()).map(Alias::getName).orElse(tableName);
 
+        List<TableRule> rules = RuleContext.getRules();
+
         for (TableRule tableRule : rules) {
-            Expression originCondition = plainSelect.getWhere();
+
             String matchTable = tableRule.getTableName();
             if (tableName.equalsIgnoreCase(matchTable)) {
                 tableRule.setTableName(aliasName);
@@ -88,6 +92,10 @@ public class InjectTableRuleSelectVisitor implements SelectVisitor {
                     attachExpression = CCJSqlParserUtil.parseCondExpression(expressionStr);
                 } catch (JSQLParserException e) {
                     throw new IllegalArgumentException("illegal cond expression: " + expressionStr);
+                }
+                Expression originCondition = plainSelect.getWhere();
+                if (originCondition != null) {
+                    originCondition.accept(new InjectExpressionVisitor());
                 }
                 Expression newCondition = originCondition == null
                         ? attachExpression : new AndExpression(originCondition, attachExpression);
