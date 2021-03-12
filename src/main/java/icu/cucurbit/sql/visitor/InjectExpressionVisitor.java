@@ -12,35 +12,32 @@ public class InjectExpressionVisitor extends ExpressionVisitorAdapter {
 
     @Override
     public void visit(SignedExpression signedExpression) {
-        signedExpression.accept(this);
+        signedExpression.accept(InjectVisitors.EXPRESSION_VISITOR);
     }
 
-
-
-    //
     @Override
     public void visit(Parenthesis parenthesis) {
-        parenthesis.getExpression().accept(this);
+        parenthesis.getExpression().accept(InjectVisitors.EXPRESSION_VISITOR);
     }
 
     // between
     @Override
     public void visit(Between between) {
-        between.getLeftExpression().accept(this);
-        between.getBetweenExpressionStart().accept(this);
-        between.getBetweenExpressionEnd().accept(this);
+        between.getLeftExpression().accept(InjectVisitors.EXPRESSION_VISITOR);
+        between.getBetweenExpressionStart().accept(InjectVisitors.EXPRESSION_VISITOR);
+        between.getBetweenExpressionEnd().accept(InjectVisitors.EXPRESSION_VISITOR);
     }
 
     // in表达式
     @Override
     public void visit(InExpression inExpression) {
         if (inExpression.getLeftExpression() != null) {
-            inExpression.getLeftExpression().accept(this);
+            inExpression.getLeftExpression().accept(InjectVisitors.EXPRESSION_VISITOR);
         } else if (inExpression.getLeftItemsList() != null) {
             ItemsList leftItemsList = inExpression.getLeftItemsList();
-            leftItemsList.accept(new InjectItemsListVisitor());
+            leftItemsList.accept(InjectVisitors.ITEMS_LIST_VISITOR);
         }
-        inExpression.getRightItemsList().accept(new InjectItemsListVisitor());
+        inExpression.getRightItemsList().accept(InjectVisitors.ITEMS_LIST_VISITOR);
     }
 
     // 子查询
@@ -48,30 +45,30 @@ public class InjectExpressionVisitor extends ExpressionVisitorAdapter {
     public void visit(SubSelect subSelect) {
         if (subSelect.getWithItemsList() != null) {
             for (WithItem withItem : subSelect.getWithItemsList()) {
-                withItem.accept(new InjectSelectVisitor());
+                withItem.accept(InjectVisitors.SELECT_VISITOR);
             }
         }
-        subSelect.getSelectBody().accept(new InjectSelectVisitor());
+        subSelect.getSelectBody().accept(InjectVisitors.SELECT_VISITOR);
     }
 
     // exist
     @Override
     public void visit(ExistsExpression existsExpression) {
-        existsExpression.getRightExpression().accept(this);
+        existsExpression.getRightExpression().accept(InjectVisitors.EXPRESSION_VISITOR);
     }
 
     // allComparisonExpression??
     @Override
     public void visit(AllComparisonExpression allComparisonExpression) {
         allComparisonExpression.getSubSelect().getSelectBody()
-                .accept(new InjectSelectVisitor());
+                .accept(InjectVisitors.SELECT_VISITOR);
     }
 
     // anyComparisonExpression??
     @Override
     public void visit(AnyComparisonExpression anyComparisonExpression) {
         anyComparisonExpression.getSubSelect().getSelectBody()
-                .accept(new InjectSelectVisitor());
+                .accept(InjectVisitors.SELECT_VISITOR);
     }
 
 
@@ -80,14 +77,14 @@ public class InjectExpressionVisitor extends ExpressionVisitorAdapter {
     @Override
     public void visit(RowConstructor rowConstructor) {
         for (Expression expr : rowConstructor.getExprList().getExpressions()) {
-            expr.accept(this);
+            expr.accept(InjectVisitors.EXPRESSION_VISITOR);
         }
     }
 
     // cast
     @Override
     public void visit(CastExpression cast) {
-        cast.getLeftExpression().accept(this);
+        cast.getLeftExpression().accept(InjectVisitors.EXPRESSION_VISITOR);
     }
 
     // 加法
@@ -218,8 +215,8 @@ public class InjectExpressionVisitor extends ExpressionVisitorAdapter {
 
     // 二元表达式
     public void visitBinaryExpression(BinaryExpression binaryExpression) {
-        binaryExpression.getLeftExpression().accept(this);
-        binaryExpression.getRightExpression().accept(this);
+        binaryExpression.getLeftExpression().accept(InjectVisitors.EXPRESSION_VISITOR);
+        binaryExpression.getRightExpression().accept(InjectVisitors.EXPRESSION_VISITOR);
     }
 
 
