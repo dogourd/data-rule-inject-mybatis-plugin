@@ -1,6 +1,6 @@
 package icu.cucurbit.rule;
 
-import com.alibaba.fastjson.JSON;
+
 
 
 public abstract class ConditionObject {
@@ -31,7 +31,7 @@ public abstract class ConditionObject {
 
         ConditionObject result = first.and(secondOrThird);
         System.out.println(result);
-        System.out.println(JSON.toJSONString(result));
+
 
         // ( (a > b) and (a > c) ) or ( (a > d) and (a > e) )
         first = new AtomicConditionObject("a", ">", "b");
@@ -42,7 +42,7 @@ public abstract class ConditionObject {
         ConditionObject thirdAndFourthReNew = third.and(fourth);
         result = firstAndSecond.or(thirdAndFourthReNew);
         System.out.println(result);
-        System.out.println(JSON.toJSON(result));
+
 
 
     }

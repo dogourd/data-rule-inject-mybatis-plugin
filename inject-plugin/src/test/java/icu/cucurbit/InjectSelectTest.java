@@ -16,7 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @RunWith(BlockJUnit4ClassRunner.class)
-public class InjectTest {
+public class InjectSelectTest {
 
 
     private List<TableRule> rules;
