@@ -1,6 +1,12 @@
 package icu.cucurbit;
 
-import icu.cucurbit.sql.TableRule;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import icu.cucurbit.rule.AbstractTableFilter;
+import icu.cucurbit.rule.FilterFactory;
+import icu.cucurbit.rule.TableRule;
 import icu.cucurbit.sql.visitor.InjectSelectVisitor;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
@@ -11,9 +17,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.BlockJUnit4ClassRunner;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @RunWith(BlockJUnit4ClassRunner.class)
 public class InjectSelectTest {
@@ -26,7 +29,9 @@ public class InjectSelectTest {
         rules = new ArrayList<>();
         rules.add(new TableRule("users", "del_flag", "=", 0));
         rules.add(new TableRule("user_role", "id", "=", 0));
-        RuleContext.setRules(rules);
+
+		List<AbstractTableFilter> filters = rules.stream().map(FilterFactory::createFilter).collect(Collectors.toList());
+		InjectContext.setFilters(filters);
     }
 
     @Test

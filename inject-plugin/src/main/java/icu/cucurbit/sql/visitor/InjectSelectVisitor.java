@@ -1,11 +1,13 @@
 package icu.cucurbit.sql.visitor;
 
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-import icu.cucurbit.RuleContext;
-import icu.cucurbit.sql.TableRule;
+import icu.cucurbit.InjectContext;
+import icu.cucurbit.rule.AbstractTableFilter;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.Expression;
@@ -20,6 +22,7 @@ import net.sf.jsqlparser.statement.select.SelectVisitor;
 import net.sf.jsqlparser.statement.select.SetOperationList;
 import net.sf.jsqlparser.statement.select.WithItem;
 import net.sf.jsqlparser.statement.values.ValuesStatement;
+import org.apache.ibatis.type.TypeHandlerRegistry;
 
 public class InjectSelectVisitor implements SelectVisitor {
 
@@ -91,14 +94,23 @@ public class InjectSelectVisitor implements SelectVisitor {
         String tableName = table.getName();
         String aliasName = Optional.ofNullable(table.getAlias()).map(Alias::getName).orElse(tableName);
 
-        List<TableRule> rules = RuleContext.getRules();
+        List<AbstractTableFilter> filters = InjectContext.getFilters();
+		Connection connection = InjectContext.getConnection();
+		TypeHandlerRegistry registry = InjectContext.getRegistry();
 
-        for (TableRule tableRule : rules) {
-            String matchTable = tableRule.getTableName();
+		for (AbstractTableFilter filter : filters) {
+            String matchTable = filter.getTable();
             if (tableName.equalsIgnoreCase(matchTable)) {
-                tableRule.setTableName(aliasName);
-                String expressionStr = tableRule.toExpressionString();
-                Expression attachExpression;
+            	filter.setTable(aliasName);
+				String expressionStr;
+				try {
+					expressionStr = filter.toSqlExpression(connection, registry);
+				}
+				catch (SQLException throwable) {
+					throw new RuntimeException("illegal filter: " + filter);
+				}
+
+				Expression attachExpression;
                 try {
                     attachExpression = CCJSqlParserUtil.parseCondExpression(expressionStr);
                 } catch (JSQLParserException e) {

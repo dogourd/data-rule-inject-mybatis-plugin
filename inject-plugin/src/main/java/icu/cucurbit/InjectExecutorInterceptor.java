@@ -1,6 +1,13 @@
 package icu.cucurbit;
 
-import icu.cucurbit.sql.TableRule;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Properties;
+
+import icu.cucurbit.rule.TableRule;
 import icu.cucurbit.sql.visitor.InjectSelectVisitor;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
@@ -12,15 +19,14 @@ import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.mapping.MappedStatement;
 import org.apache.ibatis.mapping.SqlSource;
-import org.apache.ibatis.plugin.*;
+import org.apache.ibatis.plugin.Interceptor;
+import org.apache.ibatis.plugin.Intercepts;
+import org.apache.ibatis.plugin.Invocation;
+import org.apache.ibatis.plugin.Plugin;
+import org.apache.ibatis.plugin.Signature;
 import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
-
-import java.lang.reflect.Field;
-import java.util.List;
-import java.util.Objects;
-import java.util.Properties;
 
 @Intercepts({
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class}),
@@ -43,7 +49,8 @@ public class InjectExecutorInterceptor implements Interceptor {
             boundSql = (BoundSql) args[5];
         }
 
-        List<TableRule> rules = RuleContext.getRules();
+//        List<TableRule> rules = InjectContext.getFilters();
+		List<TableRule> rules = new ArrayList<>();
         if (Objects.nonNull(rules) && !rules.isEmpty()) {
             InjectSelectVisitor injectVisitor = new InjectSelectVisitor();
             String sql = boundSql.getSql();
@@ -123,13 +130,9 @@ public class InjectExecutorInterceptor implements Interceptor {
 
         Field additionalParametersField = clz.getDeclaredField("additionalParameters");
         additionalParametersField.setAccessible(true);
-        Object additionalParameters = additionalParametersField.get(oldBoundSql);
-        additionalParametersField.set(newBoundSql, additionalParameters);
-
-        Field metaParametersField = clz.getDeclaredField("metaParameters");
-        metaParametersField.setAccessible(true);
-        Object metaParameters = metaParametersField.get(oldBoundSql);
-        metaParametersField.set(newBoundSql, metaParameters);
+		@SuppressWarnings("unchecked")
+		Map<String, Object> additionalParameters = (Map<String, Object>) additionalParametersField.get(oldBoundSql);
+		additionalParameters.forEach(newBoundSql::setAdditionalParameter);
 
         return newBoundSql;
     }

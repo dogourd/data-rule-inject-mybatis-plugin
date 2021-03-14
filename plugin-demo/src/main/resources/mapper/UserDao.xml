@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="icu.cucurbit.inject.dao.UserDao">
+
+	<select id="findAllByIdIn" resultType="icu.cucurbit.inject.entity.User">
+		select * from users
+		<where>
+			id in
+			<foreach collection="ids" open="(" item="id" separator="," close=")">
+				#{id,jdbcType=VARCHAR}
+			</foreach>
+		</where>
+	</select>
+</mapper>
