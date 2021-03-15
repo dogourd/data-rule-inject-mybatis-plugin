@@ -1,12 +1,9 @@
 package icu.cucurbit;
 
 import icu.cucurbit.sql.TableRule;
-import icu.cucurbit.sql.visitor.InjectSelectVisitor;
+import icu.cucurbit.sql.visitor.InjectVisitors;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
-import net.sf.jsqlparser.statement.select.Select;
-import net.sf.jsqlparser.statement.select.SelectBody;
-import net.sf.jsqlparser.statement.select.WithItem;
 import org.apache.ibatis.cache.CacheKey;
 import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.mapping.BoundSql;
@@ -16,6 +13,8 @@ import org.apache.ibatis.plugin.*;
 import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Field;
 import java.util.List;
@@ -27,6 +26,8 @@ import java.util.Properties;
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class}),
 })
 public class InjectExecutorInterceptor implements Interceptor {
+
+    private static final Logger log = LoggerFactory.getLogger(InjectExecutorInterceptor.class);
 
     private static final String INJECT_SUFFIX = "_inject_rule";
 
@@ -45,14 +46,14 @@ public class InjectExecutorInterceptor implements Interceptor {
 
         List<TableRule> rules = RuleContext.getRules();
         if (Objects.nonNull(rules) && !rules.isEmpty()) {
-            InjectSelectVisitor injectVisitor = new InjectSelectVisitor();
             String sql = boundSql.getSql();
             Statement statement = CCJSqlParserUtil.parse(sql);
 
             // 修改 sql.
-            injectSelectSql(statement, injectVisitor);
+            statement.accept(InjectVisitors.CRUD_VISITOR);
 
             String newSql = statement.toString();
+            log.debug("inject sql finish. generated sql: {}", newSql);
             BoundSql newBoundSql = copyBoundSql(newSql, ms.getConfiguration(), boundSql);
 
             String newMsId = ms.getId() + INJECT_SUFFIX;
@@ -76,20 +77,7 @@ public class InjectExecutorInterceptor implements Interceptor {
     }
 
 
-    private void injectSelectSql(Statement statement, InjectSelectVisitor injectVisitor) {
-        Select select = (Select) statement;
-        // with.
-        List<WithItem> withItems = select.getWithItemsList();
-        if (Objects.nonNull(withItems) && !withItems.isEmpty()) {
-            for (WithItem withItem : withItems) {
-                withItem.accept(injectVisitor);
-            }
-        }
 
-        // select.
-        SelectBody selectBody = select.getSelectBody();
-        selectBody.accept(injectVisitor);
-    }
 
 
     private MappedStatement copyMappedStatement(MappedStatement oldMs, SqlSource newSqlSource, String newMsId) {
@@ -134,7 +122,7 @@ public class InjectExecutorInterceptor implements Interceptor {
         return newBoundSql;
     }
 
-    public static class DirectSqlSource implements SqlSource {
+    private static class DirectSqlSource implements SqlSource {
 
         private final BoundSql boundSql;
 

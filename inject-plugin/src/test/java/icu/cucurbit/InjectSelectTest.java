@@ -1,12 +1,11 @@
 package icu.cucurbit;
 
 import icu.cucurbit.sql.TableRule;
-import icu.cucurbit.sql.visitor.InjectSelectVisitor;
+import icu.cucurbit.sql.visitor.InjectCrudVisitor;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
-import net.sf.jsqlparser.statement.select.Select;
-import net.sf.jsqlparser.statement.select.WithItem;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -32,64 +31,61 @@ public class InjectSelectTest {
     @Test
     public void testSimpleSql() throws JSQLParserException {
         String sql = "select * from users";
-        injectAndPrintSql(sql, rules);
+        String newSql = inject(sql);
+        Assert.assertEquals("SELECT * FROM users WHERE users.del_flag = 0", newSql);
     }
 
     @Test
     public void testJoinSql() throws JSQLParserException {
         String sql = "select * from users join user_role on users.id = user_role.user_id";
-        injectAndPrintSql(sql, rules);
+        String newSql = inject(sql);
+        Assert.assertEquals("SELECT * FROM users JOIN user_role ON users.id = user_role.user_id WHERE users.del_flag = 0 AND user_role.id = 0", newSql);
     }
 
     @Test
     public void testUnionAllSql() throws JSQLParserException {
         String sql = "select * from users where id = 1 union all select * from users where id = 2";
-        injectAndPrintSql(sql, rules);
+        String newSql = inject(sql);
+        Assert.assertEquals("SELECT * FROM users WHERE id = 1 AND users.del_flag = 0 UNION ALL SELECT * FROM users WHERE id = 2 AND users.del_flag = 0", newSql);
     }
 
     @Test
     public void testWithSql() throws JSQLParserException {
         String sql = "with \"tmp\" as (select * from users) select * from tmp where tmp.id = 1";
-        injectAndPrintSql(sql, rules);
+        String newSql = inject(sql);
+        Assert.assertEquals("WITH \"tmp\" AS (SELECT * FROM users WHERE users.del_flag = 0) SELECT * FROM tmp WHERE tmp.id = 1", newSql);
     }
 
     @Test
     public void testSubQuerySql() throws JSQLParserException {
         String sql = "select * from (select * from users) u";
-        injectAndPrintSql(sql, rules);
+        String newSql = inject(sql);
+        Assert.assertEquals("SELECT * FROM (SELECT * FROM users WHERE users.del_flag = 0) u", newSql);
     }
 
     @Test
     public void testAlias() throws JSQLParserException {
         String sql = "select * from users u";
-        injectAndPrintSql(sql, rules);
+        String newSql = inject(sql);
+        Assert.assertEquals("SELECT * FROM users u WHERE u.del_flag = 0", newSql);
     }
 
     @Test
     public void testWhereSubQuery() throws JSQLParserException {
         String sql = "select * from user_role where user_id in (select * from users)";
-        injectAndPrintSql(sql, rules);
+        String newSql = inject(sql);
+        Assert.assertEquals("SELECT * FROM user_role WHERE user_id IN (SELECT * FROM users WHERE users.del_flag = 0) AND user_role.id = 0", newSql);
     }
 
 
 
 
 
-    private void injectAndPrintSql(String selectSql, List<TableRule> rules) throws JSQLParserException {
+    private String inject(String selectSql) throws JSQLParserException {
         Statement statement = CCJSqlParserUtil.parse(selectSql);
-        Select select = (Select) statement;
+        InjectCrudVisitor crudVisitor = new InjectCrudVisitor();
+        statement.accept(crudVisitor);
 
-        InjectSelectVisitor visitor = new InjectSelectVisitor();
-
-        List<WithItem> withItems = select.getWithItemsList();
-        if (withItems != null && !withItems.isEmpty()) {
-            for (WithItem item : withItems) {
-                item.accept(visitor);
-            }
-        }
-
-        select.getSelectBody().accept(visitor);
-
-        System.out.println(statement.toString());
+        return statement.toString();
     }
 }
