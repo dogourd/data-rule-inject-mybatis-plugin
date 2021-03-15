@@ -1,5 +1,6 @@
 package icu.cucurbit.sql;
 
+import icu.cucurbit.TableRuleHelper;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -24,14 +25,7 @@ public class TableRule {
         Objects.requireNonNull(target);
 
 
-        StringBuilder builder = new StringBuilder();
-        builder.append(tableName).append(".").append(property).append(relation);
-        if (target instanceof String) {
-            builder.append("'").append(target).append("'");
-        } else {
-            builder.append(target);
-        }
-        return builder.toString();
+        return tableName + "." + TableRuleHelper.toSql(this);
     }
 
 }

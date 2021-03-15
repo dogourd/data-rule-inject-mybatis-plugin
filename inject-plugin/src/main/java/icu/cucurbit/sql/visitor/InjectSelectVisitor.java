@@ -105,6 +105,7 @@ public class InjectSelectVisitor implements SelectVisitor {
                     throw new IllegalArgumentException("illegal cond expression: " + expressionStr);
                 }
                 Expression originCondition = plainSelect.getWhere();
+
                 Expression newCondition = originCondition == null
                         ? attachExpression : new AndExpression(originCondition, attachExpression);
                 plainSelect.setWhere(newCondition);
