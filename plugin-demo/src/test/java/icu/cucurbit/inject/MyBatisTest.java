@@ -30,8 +30,14 @@ public class MyBatisTest {
     }
 
     @Test
-    public void testInject() {
+    public void testSelect() {
         List<User> users = userDao.findAll();
         System.out.println(users);
+    }
+
+    @Test
+    public void testUpdate() {
+        int effectRow = userDao.update();
+        System.out.println(effectRow);
     }
 }

@@ -24,6 +24,7 @@ import java.util.Properties;
 @Intercepts({
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class}),
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class}),
+        @Signature(type = Executor.class, method = "update", args = {MappedStatement.class, Object.class})
 })
 public class InjectExecutorInterceptor implements Interceptor {
 
@@ -38,10 +39,10 @@ public class InjectExecutorInterceptor implements Interceptor {
         Object parameter = args[1];
 
         BoundSql boundSql;
-        if (args.length == 4) {
-            boundSql = ms.getBoundSql(parameter);
-        } else {
+        if (args.length == 6) {
             boundSql = (BoundSql) args[5];
+        } else {
+            boundSql = ms.getBoundSql(parameter);
         }
 
         List<TableRule> rules = RuleContext.getRules();
