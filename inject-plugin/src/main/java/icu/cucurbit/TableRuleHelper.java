@@ -4,9 +4,6 @@ import com.google.common.collect.Sets;
 import icu.cucurbit.sql.TableRule;
 
 import java.lang.reflect.Array;
-import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 public class TableRuleHelper {
@@ -74,18 +71,31 @@ public class TableRuleHelper {
 
 
     private static String value(Object value) {
-        if (value instanceof String) {
-            return "'" + ((String) value).replace("'", "''") + "'";
+        if (value instanceof Short
+                || value instanceof Integer
+                || value instanceof Long
+                || value instanceof Float
+                || value instanceof Double) {
+            return value.toString();
         }
-        if (value instanceof Date) {
-            SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            return value(formatter.format((Date) value));
+        String str = value.toString();
+        StringBuilder builder = new StringBuilder((str.length() + 10) / 10 * 11);
+        builder.append("'");
+        for (int i = 0; i < str.length(); i ++) {
+            char ch = str.charAt(i);
+            if (ch == '\0') {
+                throw new IllegalArgumentException("Zero bytes may not occur in string parameters.");
+            }
+            if (ch == '\'') {
+                builder.append('\'');
+            }
+            builder.append(ch);
         }
-        if (value instanceof LocalDateTime) {
-            return value(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format((LocalDateTime) value));
-        }
-        return value.toString();
+        builder.append("'");
+
+        return builder.toString();
     }
+
 
 
 }
