@@ -25,7 +25,8 @@ public class MyBatisTest {
     @Before
     public void setup() {
         List<TableRule> rules = Lists.newArrayList(
-            new TableRule("users", "del_flag", "in", Arrays.asList(1,2,3,4,5,0))
+                new TableRule("users", "del_flag", "in", Arrays.asList(1, 2, 3, 4, 5, 0)),
+                new TableRule("users", "username", "=", "yuwen")
         );
         RuleContext.setRules(rules);
     }
