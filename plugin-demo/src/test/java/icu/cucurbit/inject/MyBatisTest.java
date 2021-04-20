@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import java.util.Arrays;
 import java.util.List;
 
 @SpringBootTest
@@ -24,14 +25,19 @@ public class MyBatisTest {
     @Before
     public void setup() {
         List<TableRule> rules = Lists.newArrayList(
-            new TableRule("users", "del_flag", "=", 0)
+            new TableRule("users", "del_flag", "in", Arrays.asList(1,2,3,4,5,0))
         );
         RuleContext.setRules(rules);
     }
 
     @Test
     public void testSelect() {
+        User user = new User();
+        user.setUsername("yuwen");
         List<User> users = userDao.findAll();
+        users = userDao.findByUser(user);
+        users = userDao.findByUsernamePassword("yuwen", "pass");
+        users = userDao.findByUserAndPassword(user, "pass");
         System.out.println(users);
     }
 
