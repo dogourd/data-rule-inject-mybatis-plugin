@@ -1,6 +1,7 @@
 package icu.cucurbit.sql.visitor;
 
 import icu.cucurbit.RuleContext;
+import icu.cucurbit.sql.JdbcIndexAndParameters;
 import icu.cucurbit.sql.TableRule;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Alias;
@@ -19,8 +20,9 @@ import java.util.Optional;
 
 public class InjectCrudVisitor extends StatementVisitorAdapter {
 
-    public InjectCrudVisitor() {
-
+    private final JdbcIndexAndParameters parameterAdder;
+    public InjectCrudVisitor(JdbcIndexAndParameters parameterAdder) {
+        this.parameterAdder = parameterAdder;
     }
 
     @Override
@@ -41,7 +43,7 @@ public class InjectCrudVisitor extends StatementVisitorAdapter {
 
         Expression where = delete.getWhere();
         if (where != null) {
-            where.accept(InjectVisitors.EXPRESSION_VISITOR);
+            where.accept(new InjectExpressionVisitor(this.parameterAdder));
         }
     }
 
@@ -75,7 +77,7 @@ public class InjectCrudVisitor extends StatementVisitorAdapter {
         // where.
         Expression where = update.getWhere();
         if (where != null) {
-            where.accept(InjectVisitors.EXPRESSION_VISITOR);
+            where.accept(new InjectExpressionVisitor(this.parameterAdder));
         }
 
     }
@@ -88,13 +90,14 @@ public class InjectCrudVisitor extends StatementVisitorAdapter {
     @Override
     public void visit(Select select) {
         List<WithItem> withItems = select.getWithItemsList();
+        InjectSelectVisitor selectVisitor = new InjectSelectVisitor(this.parameterAdder);
         if (withItems != null) {
-            withItems.forEach(InjectVisitors.SELECT_VISITOR::visit);
+            withItems.forEach(selectVisitor::visit);
         }
 
         SelectBody selectBody = select.getSelectBody();
         if (selectBody != null) {
-            selectBody.accept(InjectVisitors.SELECT_VISITOR);
+            selectBody.accept(selectVisitor);
         }
     }
 
@@ -108,6 +111,7 @@ public class InjectCrudVisitor extends StatementVisitorAdapter {
 
         List<TableRule> rules = RuleContext.getRules();
 
+        Expression expression = null;
         for (TableRule tableRule : rules) {
             String matchTable = tableRule.getTableName();
             if (tableName.equalsIgnoreCase(matchTable)) {
@@ -119,17 +123,18 @@ public class InjectCrudVisitor extends StatementVisitorAdapter {
                 } catch (JSQLParserException e) {
                     throw new IllegalArgumentException("illegal cond expression: " + expressionStr);
                 }
-
-
-                originCondition = originCondition == null
-                        ? attachExpression : new AndExpression(originCondition, attachExpression);
+                expression = expression == null ? attachExpression : new AndExpression(expression, attachExpression);
+                this.parameterAdder.addParameter(tableRule.getTarget());
             }
+        }
+        if (expression != null) {
+            originCondition = originCondition == null ? expression : new AndExpression(expression, originCondition);
         }
         return originCondition;
     }
 
     private Expression visitFromItem(FromItem fromItem, Expression oldExpression) {
-        InjectFromItemVisitor fromItemVisitor = new InjectFromItemVisitor();
+        InjectFromItemVisitor fromItemVisitor = new InjectFromItemVisitor(this.parameterAdder);
         fromItem.accept(fromItemVisitor);
         if(fromItemVisitor.foundTable()) {
             oldExpression = injectWhereCondition(oldExpression, fromItemVisitor.getTable());
@@ -137,8 +142,5 @@ public class InjectCrudVisitor extends StatementVisitorAdapter {
         return oldExpression;
     }
 
-    public static void main(String[] args) throws JSQLParserException {
-
-    }
 
 }

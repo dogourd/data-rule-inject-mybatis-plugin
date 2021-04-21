@@ -71,29 +71,30 @@ public class TableRuleHelper {
 
 
     private static String value(Object value) {
-        if (value instanceof Short
-                || value instanceof Integer
-                || value instanceof Long
-                || value instanceof Float
-                || value instanceof Double) {
-            return value.toString();
-        }
-        String str = value.toString();
-        StringBuilder builder = new StringBuilder((str.length() + 10) / 10 * 11);
-        builder.append("'");
-        for (int i = 0; i < str.length(); i ++) {
-            char ch = str.charAt(i);
-            if (ch == '\0') {
-                throw new IllegalArgumentException("Zero bytes may not occur in string parameters.");
-            }
-            if (ch == '\'') {
-                builder.append('\'');
-            }
-            builder.append(ch);
-        }
-        builder.append("'");
-
-        return builder.toString();
+//        if (value instanceof Short
+//                || value instanceof Integer
+//                || value instanceof Long
+//                || value instanceof Float
+//                || value instanceof Double) {
+//            return value.toString();
+//        }
+//        String str = value.toString();
+//        StringBuilder builder = new StringBuilder((str.length() + 10) / 10 * 11);
+//        builder.append("'");
+//        for (int i = 0; i < str.length(); i ++) {
+//            char ch = str.charAt(i);
+//            if (ch == '\0') {
+//                throw new IllegalArgumentException("Zero bytes may not occur in string parameters.");
+//            }
+//            if (ch == '\'') {
+//                builder.append('\'');
+//            }
+//            builder.append(ch);
+//        }
+//        builder.append("'");
+//
+//        return builder.toString();
+        return "?";
     }
 
 

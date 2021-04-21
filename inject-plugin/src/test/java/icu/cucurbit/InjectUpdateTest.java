@@ -51,7 +51,7 @@ public class InjectUpdateTest {
 	private String inject(String sql) throws JSQLParserException {
 		Statement statement = CCJSqlParserUtil.parse(sql);
 
-		InjectCrudVisitor crudVisitor = new InjectCrudVisitor();
+		InjectCrudVisitor crudVisitor = new InjectCrudVisitor(null);
 
 		statement.accept(crudVisitor);
 

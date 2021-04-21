@@ -1,10 +1,7 @@
 package icu.cucurbit.sql.visitor;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-
 import icu.cucurbit.RuleContext;
+import icu.cucurbit.sql.JdbcIndexAndParameters;
 import icu.cucurbit.sql.TableRule;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Alias;
@@ -12,18 +9,20 @@ import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Table;
-import net.sf.jsqlparser.statement.select.FromItem;
-import net.sf.jsqlparser.statement.select.Join;
-import net.sf.jsqlparser.statement.select.PlainSelect;
-import net.sf.jsqlparser.statement.select.SelectBody;
-import net.sf.jsqlparser.statement.select.SelectVisitor;
-import net.sf.jsqlparser.statement.select.SetOperationList;
-import net.sf.jsqlparser.statement.select.WithItem;
+import net.sf.jsqlparser.statement.select.*;
 import net.sf.jsqlparser.statement.values.ValuesStatement;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
 public class InjectSelectVisitor implements SelectVisitor {
 
-    public InjectSelectVisitor() {
+    private JdbcIndexAndParameters parameterAdder;
+
+    public InjectSelectVisitor(JdbcIndexAndParameters parameterAdder) {
+        this.parameterAdder = parameterAdder;
     }
 
     @Override
@@ -32,7 +31,7 @@ public class InjectSelectVisitor implements SelectVisitor {
         // from.
         FromItem fromItem = plainSelect.getFromItem();
         if (Objects.nonNull(fromItem)) {
-            InjectFromItemVisitor fromItemVisitor = new InjectFromItemVisitor();
+            InjectFromItemVisitor fromItemVisitor = new InjectFromItemVisitor(this.parameterAdder);
             fromItem.accept(fromItemVisitor);
 
             // from table.
@@ -46,7 +45,7 @@ public class InjectSelectVisitor implements SelectVisitor {
         if (Objects.nonNull(joins)) {
             for (Join join : joins) {
                 FromItem joinItem = join.getRightItem();
-                InjectFromItemVisitor joinItemVisitor = new InjectFromItemVisitor();
+                InjectFromItemVisitor joinItemVisitor = new InjectFromItemVisitor(this.parameterAdder);
                 joinItem.accept(joinItemVisitor);
 
                 // join table.
@@ -59,7 +58,7 @@ public class InjectSelectVisitor implements SelectVisitor {
 		// where
 		Expression where = plainSelect.getWhere();
 		if (where != null) {
-			where.accept(InjectVisitors.EXPRESSION_VISITOR);
+			where.accept(new InjectExpressionVisitor(this.parameterAdder));
 		}
 
     }
@@ -93,6 +92,7 @@ public class InjectSelectVisitor implements SelectVisitor {
 
         List<TableRule> rules = RuleContext.getRules();
 
+        Expression expression = null;
         for (TableRule tableRule : rules) {
             String matchTable = tableRule.getTableName();
             if (tableName.equalsIgnoreCase(matchTable)) {
@@ -104,12 +104,19 @@ public class InjectSelectVisitor implements SelectVisitor {
                 } catch (JSQLParserException e) {
                     throw new IllegalArgumentException("illegal cond expression: " + expressionStr);
                 }
-                Expression originCondition = plainSelect.getWhere();
+                expression = expression == null ? attachExpression : new AndExpression(expression, attachExpression);
 
-                Expression newCondition = originCondition == null
-                        ? attachExpression : new AndExpression(originCondition, attachExpression);
-                plainSelect.setWhere(newCondition);
+                if (tableRule.getTarget() instanceof Collection) {
+                    this.parameterAdder.addParameters((Collection) tableRule.getTarget());
+                } else {
+                    this.parameterAdder.addParameter(tableRule.getTarget());
+                }
             }
+        }
+        if (expression != null) {
+            Expression whereExpression = plainSelect.getWhere();
+            whereExpression = whereExpression == null ? expression : new AndExpression(expression, whereExpression);
+            plainSelect.setWhere(whereExpression);
         }
     }
 }

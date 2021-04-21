@@ -4,7 +4,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-public class JdbcParameterAdder {
+public class JdbcIndexAndParameters  {
 
     private int index;
     private int nextIndex;

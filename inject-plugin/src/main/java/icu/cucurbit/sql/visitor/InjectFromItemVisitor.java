@@ -1,23 +1,19 @@
 package icu.cucurbit.sql.visitor;
 
-import java.util.Objects;
-
+import icu.cucurbit.sql.JdbcIndexAndParameters;
 import net.sf.jsqlparser.schema.Table;
-import net.sf.jsqlparser.statement.select.FromItemVisitor;
-import net.sf.jsqlparser.statement.select.LateralSubSelect;
-import net.sf.jsqlparser.statement.select.ParenthesisFromItem;
-import net.sf.jsqlparser.statement.select.SelectBody;
-import net.sf.jsqlparser.statement.select.SubJoin;
-import net.sf.jsqlparser.statement.select.SubSelect;
-import net.sf.jsqlparser.statement.select.TableFunction;
-import net.sf.jsqlparser.statement.select.ValuesList;
+import net.sf.jsqlparser.statement.select.*;
+
+import java.util.Objects;
 
 public class InjectFromItemVisitor implements FromItemVisitor {
 
+
     private Table table;
+    private JdbcIndexAndParameters parameterAdder;
 
-    public InjectFromItemVisitor() {
-
+    public InjectFromItemVisitor(JdbcIndexAndParameters parameterAdder) {
+        this.parameterAdder = parameterAdder;
     }
 
     @Override
@@ -28,7 +24,7 @@ public class InjectFromItemVisitor implements FromItemVisitor {
     @Override
     public void visit(SubSelect subSelect) {
         SelectBody selectBody = subSelect.getSelectBody();
-        selectBody.accept(InjectVisitors.SELECT_VISITOR);
+        selectBody.accept(new InjectSelectVisitor(parameterAdder));
     }
 
     @Override

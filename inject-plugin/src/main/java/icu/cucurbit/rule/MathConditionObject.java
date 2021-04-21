@@ -1,2 +1,7 @@
-package icu.cucurbit.rule;public class MathConditionObject {
+package icu.cucurbit.rule;
+
+public class MathConditionObject extends AtomicConditionObject {
+
+
+
 }

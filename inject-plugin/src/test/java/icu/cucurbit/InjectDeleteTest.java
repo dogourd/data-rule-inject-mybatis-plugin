@@ -2,10 +2,7 @@ package icu.cucurbit;
 
 import com.google.common.collect.Lists;
 import icu.cucurbit.sql.TableRule;
-import icu.cucurbit.sql.visitor.InjectCrudVisitor;
 import net.sf.jsqlparser.JSQLParserException;
-import net.sf.jsqlparser.parser.CCJSqlParserUtil;
-import net.sf.jsqlparser.statement.Statement;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -41,9 +38,6 @@ public class InjectDeleteTest {
     }
 
     private String inject(String sql) throws JSQLParserException {
-        Statement statement = CCJSqlParserUtil.parse(sql);
-        InjectCrudVisitor visitor = new InjectCrudVisitor();
-        statement.accept(visitor);
-        return statement.toString();
+        return null;
     }
 }
