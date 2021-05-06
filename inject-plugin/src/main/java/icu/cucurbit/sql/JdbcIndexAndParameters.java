@@ -7,7 +7,6 @@ import java.util.Map;
 public class JdbcIndexAndParameters  {
 
     private int index;
-    private int nextIndex;
     private final Map<Integer, Object> mapping = new HashMap<>();
 
     public void skipOne() {
@@ -23,14 +22,10 @@ public class JdbcIndexAndParameters  {
     }
 
     public void addSingleParameter(Object value) {
-        if (index < nextIndex) {
-            index = nextIndex;
-        }
         if (mapping.containsKey(index)) {
             throw new IllegalArgumentException("index " + index + " already use");
         }
-        mapping.put(index, value);
-        nextIndex = index + 1;
+        mapping.put(index ++, value);
     }
 
     public Map<Integer, Object> getMapping() {

@@ -30,7 +30,7 @@ public class TableRuleHelper {
             sqlBuilder.append(tableRule.getField()).append(" ").append(relation).append(" (");
             StringJoiner commaJoiner = new StringJoiner(",");
             ((Iterable<?>) tableRule.getTarget()).forEach(item -> commaJoiner.add(value(item)));
-            sqlBuilder.append(commaJoiner.toString());
+            sqlBuilder.append(commaJoiner);
             sqlBuilder.append(")");
             return sqlBuilder.toString();
         }
@@ -56,8 +56,8 @@ public class TableRuleHelper {
                 min = Array.get(tableRule.getTarget(), 0);
                 max = Array.get(tableRule.getTarget(), 1);
             } else if (tableRule.getTarget() instanceof List) {
-                min = ((List) tableRule.getTarget()).get(0);
-                max = ((List) tableRule.getTarget()).get(1);
+                min = ((List<?>) tableRule.getTarget()).get(0);
+                max = ((List<?>) tableRule.getTarget()).get(1);
             } else {
                 throw new IllegalArgumentException(tableRule.getTarget() + " parse fail.");
             }
@@ -70,30 +70,8 @@ public class TableRuleHelper {
 
 
 
+    @SuppressWarnings("unused")
     private static String value(Object value) {
-//        if (value instanceof Short
-//                || value instanceof Integer
-//                || value instanceof Long
-//                || value instanceof Float
-//                || value instanceof Double) {
-//            return value.toString();
-//        }
-//        String str = value.toString();
-//        StringBuilder builder = new StringBuilder((str.length() + 10) / 10 * 11);
-//        builder.append("'");
-//        for (int i = 0; i < str.length(); i ++) {
-//            char ch = str.charAt(i);
-//            if (ch == '\0') {
-//                throw new IllegalArgumentException("Zero bytes may not occur in string parameters.");
-//            }
-//            if (ch == '\'') {
-//                builder.append('\'');
-//            }
-//            builder.append(ch);
-//        }
-//        builder.append("'");
-//
-//        return builder.toString();
         return "?";
     }
 

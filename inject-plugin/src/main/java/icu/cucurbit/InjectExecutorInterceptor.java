@@ -24,7 +24,6 @@ import org.slf4j.LoggerFactory;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Properties;
 
 @Intercepts({
@@ -53,37 +52,38 @@ public class InjectExecutorInterceptor implements Interceptor {
         }
 
         List<TableRule> rules = RuleContext.getRules();
-        if (Objects.nonNull(rules) && !rules.isEmpty()) {
-            String sql = boundSql.getSql();
-            Statement statement = CCJSqlParserUtil.parse(sql);
-
-            if (shouldIntercept(statement) && !RuleContext.getRules().isEmpty()) {
-                // 修改 sql.
-                JdbcIndexAndParameters parameterAdder = new JdbcIndexAndParameters();
-                statement.accept(new InjectCrudVisitor(parameterAdder));
-
-                String newSql = statement.toString();
-                System.out.println(newSql);
-                System.out.println(parameterAdder.getMapping());
-                log.debug("inject sql finish. generated sql: {}", newSql);
-
-
-                BoundSql newBoundSql = copyBoundSql(newSql, ms.getConfiguration(), boundSql);
-                List<ParameterMapping> parameterMappings = newBoundSql.getParameterMappings();
-                parameterAdder.getMapping().forEach((k, v) -> {
-                    String key = "data_rule_" + k;
-                    ParameterMapping.Builder mappingBuilder = new ParameterMapping.Builder(ms.getConfiguration(), "data_rule_" + k , v.getClass());
-                    parameterMappings.add(k, mappingBuilder.build());
-                    newBoundSql.setAdditionalParameter(key, v);
-                });
-
-                String newMsId = ms.getId() + INJECT_SUFFIX;
-                MappedStatement newStatement = copyMappedStatement(ms, new DirectSqlSource(newBoundSql), newMsId);
-
-                // 更换方法参数.
-                args[0] = newStatement;
-            }
+        if (rules == null || rules.isEmpty()) {
+            return invocation.proceed();
         }
+
+        String sql = boundSql.getSql();
+        Statement statement = CCJSqlParserUtil.parse(sql);
+        if (!shouldIntercept(statement) || RuleContext.getRules().isEmpty()) {
+            return invocation.proceed();
+        }
+
+        // 修改 sql.
+        JdbcIndexAndParameters parameterAdder = new JdbcIndexAndParameters();
+        statement.accept(new InjectCrudVisitor(parameterAdder));
+
+        String newSql = statement.toString();
+        log.debug("inject sql finish. generated sql: {}", newSql);
+
+        BoundSql newBoundSql = copyBoundSql(newSql, ms.getConfiguration(), boundSql);
+        List<ParameterMapping> parameterMappings = newBoundSql.getParameterMappings();
+        parameterAdder.getMapping().forEach((k, v) -> {
+            String key = "data_rule_" + k;
+            ParameterMapping.Builder mappingBuilder = new ParameterMapping.Builder(
+                    ms.getConfiguration(), key , v.getClass()
+            );
+            parameterMappings.add(k, mappingBuilder.build());
+            newBoundSql.setAdditionalParameter(key, v);
+        });
+
+        String newMsId = ms.getId() + INJECT_SUFFIX;
+        MappedStatement newStatement = copyMappedStatement(ms, new DirectSqlSource(newBoundSql), newMsId);
+        // 更换方法参数.
+        args[0] = newStatement;
 
         return invocation.proceed();
     }
