@@ -15,64 +15,75 @@ import net.sf.jsqlparser.statement.insert.Insert;
 import net.sf.jsqlparser.statement.select.*;
 import net.sf.jsqlparser.statement.update.Update;
 
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 public class InjectCrudVisitor extends StatementVisitorAdapter {
 
     private final JdbcIndexAndParameters parameterAdder;
+
     public InjectCrudVisitor(JdbcIndexAndParameters parameterAdder) {
         this.parameterAdder = parameterAdder;
     }
 
     @Override
     public void visit(Delete delete) {
+        List<TableRule> suitableRules = new ArrayList<>();
+
         Table table = delete.getTable();
-        if (table != null) {
-            Expression newExpression = visitFromItem(table, delete.getWhere());
-            delete.setWhere(newExpression);
-        }
+        Optional.ofNullable(table).ifPresent(t -> {
+            List<TableRule> rules = visitFromItem(table);
+            suitableRules.addAll(rules);
+        });
 
         List<Join> joins = delete.getJoins();
-        if (joins != null) {
-            for (Join join : joins) {
-                Expression newExpression = visitFromItem(join.getRightItem(), delete.getWhere());
-                delete.setWhere(newExpression);
-            }
-        }
+        Optional.ofNullable(joins).orElse(Collections.emptyList()).forEach(item -> {
+            List<TableRule> rules = visitFromItem(item.getRightItem());
+            suitableRules.addAll(rules);
+        });
 
         Expression where = delete.getWhere();
         if (where != null) {
             where.accept(new InjectExpressionVisitor(this.parameterAdder));
         }
+
+        if (suitableRules.isEmpty()) {
+            return;
+        }
+
+        Expression newWhere = assembleExpression(where, suitableRules);
+        delete.setWhere(newWhere);
     }
+
 
     @Override
     public void visit(Update update) {
+        List<TableRule> suitableRules = new ArrayList<>();
         // tables.
         List<Table> tables = update.getTables();
-        if (tables != null) {
-            for (Table table : tables) {
-                Expression newExpression = visitFromItem(table, update.getWhere());
-                update.setWhere(newExpression);
-            }
-        }
+        Optional.ofNullable(tables).orElse(Collections.emptyList()).forEach(table -> {
+            List<TableRule> rules = visitFromItem(table);
+            suitableRules.addAll(rules);
+        });
 
         // from.
         FromItem fromItem = update.getFromItem();
-        if (fromItem != null) {
-            Expression newExpression = visitFromItem(fromItem, update.getWhere());
-            update.setWhere(newExpression);
-        }
+        Optional.ofNullable(fromItem).ifPresent(fi -> {
+            List<TableRule> rules = visitFromItem(fi);
+            suitableRules.addAll(rules);
+        });
+
+        // set.
+        InjectExpressionVisitor setVisitor = new InjectExpressionVisitor(parameterAdder);
+        List<Expression> expressions = update.getExpressions();
+        Optional.ofNullable(expressions).orElse(Collections.emptyList())
+                .forEach(expression -> expression.accept(setVisitor));
 
         // join.
         List<Join> joins = update.getJoins();
-        if (joins != null) {
-            for (Join join : joins) {
-                Expression newExpression = visitFromItem(join.getRightItem(), update.getWhere());
-                update.setWhere(newExpression);
-            }
-        }
+        Optional.ofNullable(joins).orElse(Collections.emptyList()).forEach(join -> {
+            List<TableRule> rules = visitFromItem(join.getRightItem());
+            suitableRules.addAll(rules);
+        });
 
         // where.
         Expression where = update.getWhere();
@@ -80,6 +91,8 @@ public class InjectCrudVisitor extends StatementVisitorAdapter {
             where.accept(new InjectExpressionVisitor(this.parameterAdder));
         }
 
+        Expression newWhere = assembleExpression(where, suitableRules);
+        update.setWhere(newWhere);
     }
 
     @Override
@@ -101,46 +114,56 @@ public class InjectCrudVisitor extends StatementVisitorAdapter {
         }
     }
 
-
-    /**
-     * where 添加 and 条件.
-     */
-    private Expression injectWhereCondition(Expression originCondition, Table table) {
+    private List<TableRule> getSuitableRules(Table table) {
         String tableName = table.getName();
         String aliasName = Optional.ofNullable(table.getAlias()).map(Alias::getName).orElse(tableName);
 
         List<TableRule> rules = RuleContext.getRules();
-
-        Expression expression = null;
-        for (TableRule tableRule : rules) {
-            String matchTable = tableRule.getTableName();
-            if (tableName.equalsIgnoreCase(matchTable)) {
-                tableRule.setTableName(aliasName);
-                String expressionStr = tableRule.toExpressionString();
-                Expression attachExpression;
-                try {
-                    attachExpression = CCJSqlParserUtil.parseCondExpression(expressionStr);
-                } catch (JSQLParserException e) {
-                    throw new IllegalArgumentException("illegal cond expression: " + expressionStr);
-                }
-                expression = expression == null ? attachExpression : new AndExpression(expression, attachExpression);
-                this.parameterAdder.addParameter(tableRule.getTarget());
+        List<TableRule> result = new ArrayList<>();
+        for (TableRule rule : rules) {
+            if (tableName.equals(rule.getTableName())) {
+                TableRule copyRule = new TableRule();
+                copyRule.setTableName(aliasName);
+                copyRule.setRelation(rule.getRelation());
+                copyRule.setProperty(rule.getProperty());
+                copyRule.setTarget(rule.getTarget());
+                result.add(copyRule);
             }
         }
-        if (expression != null) {
-            originCondition = originCondition == null ? expression : new AndExpression(expression, originCondition);
-        }
-        return originCondition;
+        return result;
     }
 
-    private Expression visitFromItem(FromItem fromItem, Expression oldExpression) {
-        InjectFromItemVisitor fromItemVisitor = new InjectFromItemVisitor(this.parameterAdder);
-        fromItem.accept(fromItemVisitor);
-        if(fromItemVisitor.foundTable()) {
-            oldExpression = injectWhereCondition(oldExpression, fromItemVisitor.getTable());
+    private Expression assembleExpression(Expression oldExpression, List<TableRule> rules) {
+        Expression finalExpression = null;
+        for (TableRule rule : rules) {
+            String expressionStr = rule.toExpressionString();
+            try {
+                Expression expression = CCJSqlParserUtil.parseCondExpression(expressionStr);
+                finalExpression = finalExpression == null ? expression : new AndExpression(finalExpression, expression);
+                parameterAdder.addParameter(rule.getTarget());
+            } catch (JSQLParserException ignore) {
+            }
         }
-        return oldExpression;
+        if (finalExpression == null) {
+            return oldExpression;
+        }
+
+        return oldExpression == null ? finalExpression : new AndExpression(oldExpression, finalExpression);
+
     }
+
+
+
+
+    private List<TableRule> visitFromItem(FromItem fromItem) {
+        InjectFromItemVisitor fromItemVisitor = new InjectFromItemVisitor(parameterAdder);
+        fromItem.accept(fromItemVisitor);
+        if (fromItemVisitor.foundTable()) {
+            return getSuitableRules(fromItemVisitor.getTable());
+        }
+        return Collections.emptyList();
+    }
+
 
 
 }

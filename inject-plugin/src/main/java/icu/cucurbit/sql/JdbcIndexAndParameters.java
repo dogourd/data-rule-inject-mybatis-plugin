@@ -15,6 +15,10 @@ public class JdbcIndexAndParameters  {
     }
 
     public void addParameter(Object value) {
+        if (value instanceof Collection) {
+            addParameters((Collection<Object>) value);
+            return;
+        }
         if (index < nextIndex) {
             index = nextIndex;
         }

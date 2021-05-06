@@ -12,10 +12,7 @@ import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.*;
 import net.sf.jsqlparser.statement.values.ValuesStatement;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 public class InjectSelectVisitor implements SelectVisitor {
 
@@ -28,32 +25,20 @@ public class InjectSelectVisitor implements SelectVisitor {
     @Override
     public void visit(PlainSelect plainSelect) {
 
+        List<TableRule> suitableRules = new ArrayList<>();
         // from.
         FromItem fromItem = plainSelect.getFromItem();
-        if (Objects.nonNull(fromItem)) {
-            InjectFromItemVisitor fromItemVisitor = new InjectFromItemVisitor(this.parameterAdder);
-            fromItem.accept(fromItemVisitor);
-
-            // from table.
-            if (fromItemVisitor.foundTable()) {
-                injectWhereCondition(plainSelect, fromItemVisitor.getTable());
-            }
-        }
+        Optional.ofNullable(fromItem).ifPresent(fi -> {
+            List<TableRule> rules = visitFromItem(fi);
+            suitableRules.addAll(rules);
+        });
 
         // join.
         List<Join> joins = plainSelect.getJoins();
-        if (Objects.nonNull(joins)) {
-            for (Join join : joins) {
-                FromItem joinItem = join.getRightItem();
-                InjectFromItemVisitor joinItemVisitor = new InjectFromItemVisitor(this.parameterAdder);
-                joinItem.accept(joinItemVisitor);
-
-                // join table.
-                if (joinItemVisitor.foundTable()) {
-                    injectWhereCondition(plainSelect, joinItemVisitor.getTable());
-                }
-            }
-        }
+        Optional.ofNullable(joins).orElse(Collections.emptyList()).forEach(j -> {
+            List<TableRule> rules = visitFromItem(j.getRightItem());
+            suitableRules.addAll(rules);
+        });
 
 		// where
 		Expression where = plainSelect.getWhere();
@@ -61,6 +46,8 @@ public class InjectSelectVisitor implements SelectVisitor {
 			where.accept(new InjectExpressionVisitor(this.parameterAdder));
 		}
 
+        Expression newWhere = assembleExpression(where, suitableRules);
+		plainSelect.setWhere(newWhere);
     }
 
     @Override
@@ -83,40 +70,59 @@ public class InjectSelectVisitor implements SelectVisitor {
     }
 
 
-    /**
-	 * where 添加 and 条件.
-	 * */
-    private void injectWhereCondition(PlainSelect plainSelect, Table table) {
+
+
+
+
+
+
+    private List<TableRule> getSuitableRules(Table table) {
         String tableName = table.getName();
         String aliasName = Optional.ofNullable(table.getAlias()).map(Alias::getName).orElse(tableName);
 
         List<TableRule> rules = RuleContext.getRules();
-
-        Expression expression = null;
-        for (TableRule tableRule : rules) {
-            String matchTable = tableRule.getTableName();
-            if (tableName.equalsIgnoreCase(matchTable)) {
-                tableRule.setTableName(aliasName);
-                String expressionStr = tableRule.toExpressionString();
-                Expression attachExpression;
-                try {
-                    attachExpression = CCJSqlParserUtil.parseCondExpression(expressionStr);
-                } catch (JSQLParserException e) {
-                    throw new IllegalArgumentException("illegal cond expression: " + expressionStr);
-                }
-                expression = expression == null ? attachExpression : new AndExpression(expression, attachExpression);
-
-                if (tableRule.getTarget() instanceof Collection) {
-                    this.parameterAdder.addParameters((Collection) tableRule.getTarget());
-                } else {
-                    this.parameterAdder.addParameter(tableRule.getTarget());
-                }
+        List<TableRule> result = new ArrayList<>();
+        for (TableRule rule : rules) {
+            if (tableName.equals(rule.getTableName())) {
+                TableRule copyRule = new TableRule();
+                copyRule.setTableName(aliasName);
+                copyRule.setRelation(rule.getRelation());
+                copyRule.setProperty(rule.getProperty());
+                copyRule.setTarget(rule.getTarget());
+                result.add(copyRule);
             }
         }
-        if (expression != null) {
-            Expression whereExpression = plainSelect.getWhere();
-            whereExpression = whereExpression == null ? expression : new AndExpression(expression, whereExpression);
-            plainSelect.setWhere(whereExpression);
-        }
+        return result;
     }
+
+    private List<TableRule> visitFromItem(FromItem fromItem) {
+        InjectFromItemVisitor fromItemVisitor = new InjectFromItemVisitor(parameterAdder);
+        fromItem.accept(fromItemVisitor);
+        if (fromItemVisitor.foundTable()) {
+            return getSuitableRules(fromItemVisitor.getTable());
+        }
+        return Collections.emptyList();
+    }
+
+    private Expression assembleExpression(Expression oldExpression, List<TableRule> rules) {
+        Expression finalExpression = null;
+        for (TableRule rule : rules) {
+            String expressionStr = rule.toExpressionString();
+            try {
+                Expression expression = CCJSqlParserUtil.parseCondExpression(expressionStr);
+                finalExpression = finalExpression == null ? expression : new AndExpression(finalExpression, expression);
+                parameterAdder.addParameter(rule.getTarget());
+            } catch (JSQLParserException ignore) {
+            }
+        }
+        if (finalExpression == null) {
+            return oldExpression;
+        }
+
+        return oldExpression == null ? finalExpression : new AndExpression(oldExpression, finalExpression);
+
+    }
+
+
+
 }
