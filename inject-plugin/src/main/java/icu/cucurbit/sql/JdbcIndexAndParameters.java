@@ -8,7 +8,7 @@ public class JdbcIndexAndParameters  {
 
     private int index;
     private int nextIndex;
-    private Map<Integer, Object> mapping = new HashMap<>();
+    private final Map<Integer, Object> mapping = new HashMap<>();
 
     public void skipOne() {
         index ++;
@@ -16,9 +16,13 @@ public class JdbcIndexAndParameters  {
 
     public void addParameter(Object value) {
         if (value instanceof Collection) {
-            addParameters((Collection<Object>) value);
-            return;
+            ((Collection<?>) value).forEach(this::addSingleParameter);
+        } else {
+            addSingleParameter(value);
         }
+    }
+
+    public void addSingleParameter(Object value) {
         if (index < nextIndex) {
             index = nextIndex;
         }
@@ -27,20 +31,6 @@ public class JdbcIndexAndParameters  {
         }
         mapping.put(index, value);
         nextIndex = index + 1;
-    }
-
-    public void addParameters(Collection<Object> values) {
-        if (index < nextIndex) {
-            index = nextIndex;
-        }
-        if (mapping.containsKey(index)) {
-            throw new IllegalArgumentException("index " + index + " already use");
-        }
-        int curIndex = index;
-        for (Object value : values) {
-            mapping.put(curIndex ++, value);
-        }
-        nextIndex = curIndex;
     }
 
     public Map<Integer, Object> getMapping() {

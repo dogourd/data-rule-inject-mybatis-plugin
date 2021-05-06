@@ -10,7 +10,7 @@ import java.util.List;
 
 public class InjectItemsListVisitor extends ItemsListVisitorAdapter {
 
-    private JdbcIndexAndParameters parameterAdder;
+    private final JdbcIndexAndParameters parameterAdder;
     public InjectItemsListVisitor(JdbcIndexAndParameters parameterAdder) {
         this.parameterAdder = parameterAdder;
     }

@@ -10,7 +10,7 @@ public class InjectFromItemVisitor implements FromItemVisitor {
 
 
     private Table table;
-    private JdbcIndexAndParameters parameterAdder;
+    private final JdbcIndexAndParameters parameterAdder;
 
     public InjectFromItemVisitor(JdbcIndexAndParameters parameterAdder) {
         this.parameterAdder = parameterAdder;

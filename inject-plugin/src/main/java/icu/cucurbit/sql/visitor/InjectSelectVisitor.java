@@ -16,7 +16,7 @@ import java.util.*;
 
 public class InjectSelectVisitor implements SelectVisitor {
 
-    private JdbcIndexAndParameters parameterAdder;
+    private final JdbcIndexAndParameters parameterAdder;
 
     public InjectSelectVisitor(JdbcIndexAndParameters parameterAdder) {
         this.parameterAdder = parameterAdder;
@@ -87,7 +87,7 @@ public class InjectSelectVisitor implements SelectVisitor {
                 TableRule copyRule = new TableRule();
                 copyRule.setTableName(aliasName);
                 copyRule.setRelation(rule.getRelation());
-                copyRule.setProperty(rule.getProperty());
+                copyRule.setField(rule.getField());
                 copyRule.setTarget(rule.getTarget());
                 result.add(copyRule);
             }

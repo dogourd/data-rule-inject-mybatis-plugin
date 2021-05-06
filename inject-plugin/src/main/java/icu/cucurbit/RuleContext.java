@@ -8,18 +8,18 @@ import java.util.List;
 
 public class RuleContext {
 
-    private static final ThreadLocal<List<TableRule>> tableRuleThreadLocal =
+    private static final ThreadLocal<List<TableRule>> tableFilters =
             ThreadLocal.withInitial(ArrayList::new);
 
     public static void setRules(List<TableRule> rules) {
-        tableRuleThreadLocal.set(rules);
+        tableFilters.set(rules);
     }
 
     public static List<TableRule> getRules() {
-        return tableRuleThreadLocal.get();
+        return tableFilters.get();
     }
 
     public static void clear() {
-        tableRuleThreadLocal.remove();
+        tableFilters.remove();
     }
 }

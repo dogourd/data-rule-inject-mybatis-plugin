@@ -15,8 +15,8 @@ import net.sf.jsqlparser.statement.select.WithItem;
  * */
 public class InjectExpressionVisitor extends ExpressionVisitorAdapter {
 
-    // getIndex return 1; need 0 in list. return 0 next is 1;;
-    private JdbcIndexAndParameters parameterAdder;
+
+    private final JdbcIndexAndParameters parameterAdder;
 
     public InjectExpressionVisitor(JdbcIndexAndParameters parameterAdder) {
         this.parameterAdder = parameterAdder;

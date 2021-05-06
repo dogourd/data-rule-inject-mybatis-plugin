@@ -15,7 +15,10 @@ import net.sf.jsqlparser.statement.insert.Insert;
 import net.sf.jsqlparser.statement.select.*;
 import net.sf.jsqlparser.statement.update.Update;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 
 public class InjectCrudVisitor extends StatementVisitorAdapter {
 
@@ -125,7 +128,7 @@ public class InjectCrudVisitor extends StatementVisitorAdapter {
                 TableRule copyRule = new TableRule();
                 copyRule.setTableName(aliasName);
                 copyRule.setRelation(rule.getRelation());
-                copyRule.setProperty(rule.getProperty());
+                copyRule.setField(rule.getField());
                 copyRule.setTarget(rule.getTarget());
                 result.add(copyRule);
             }

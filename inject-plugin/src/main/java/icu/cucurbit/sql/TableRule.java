@@ -13,14 +13,14 @@ import java.util.Objects;
 public class TableRule {
 
     private String tableName;
-    private String property;
+    private String field;
     private String relation;
     private Object target;
 
 
     public String toExpressionString() {
         Objects.requireNonNull(tableName);
-        Objects.requireNonNull(property);
+        Objects.requireNonNull(field);
         Objects.requireNonNull(relation);
         Objects.requireNonNull(target);
 

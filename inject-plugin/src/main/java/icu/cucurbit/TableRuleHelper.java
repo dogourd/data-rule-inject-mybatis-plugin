@@ -17,7 +17,7 @@ public class TableRuleHelper {
     public static String toSql(TableRule tableRule) {
         Objects.requireNonNull(tableRule);
         Objects.requireNonNull(tableRule.getRelation());
-        Objects.requireNonNull(tableRule.getProperty());
+        Objects.requireNonNull(tableRule.getField());
 
         String relation = tableRule.getRelation().trim().toUpperCase(Locale.ENGLISH);
 
@@ -27,7 +27,7 @@ public class TableRuleHelper {
                 throw new IllegalArgumentException(tableRule.getTarget() + " is not an iterable value.");
             }
             StringBuilder sqlBuilder = new StringBuilder();
-            sqlBuilder.append(tableRule.getProperty()).append(" ").append(relation).append(" (");
+            sqlBuilder.append(tableRule.getField()).append(" ").append(relation).append(" (");
             StringJoiner commaJoiner = new StringJoiner(",");
             ((Iterable<?>) tableRule.getTarget()).forEach(item -> commaJoiner.add(value(item)));
             sqlBuilder.append(commaJoiner.toString());
@@ -36,18 +36,18 @@ public class TableRuleHelper {
         }
         // is
         if (IS_RELATIONS.contains(relation)) {
-            return tableRule.getProperty() + " " + relation;
+            return tableRule.getField() + " " + relation;
         }
         // like
         if (LIKE_RELATIONS.contains(relation)) {
             if (!(tableRule.getTarget() instanceof String)) {
                 throw new IllegalArgumentException(tableRule.getTarget() + " is not a string value.");
             }
-            return tableRule.getProperty() + " " + relation + " " + value(tableRule.getTarget());
+            return tableRule.getField() + " " + relation + " " + value(tableRule.getTarget());
         }
         // >, =....
         if (COMPARE_RELATIONS.contains(relation)) {
-            return tableRule.getProperty() + " " + relation + " " + value(tableRule.getTarget());
+            return tableRule.getField() + " " + relation + " " + value(tableRule.getTarget());
         }
         // between
         if (BETWEEN_RELATIONS.contains(relation)) {
@@ -62,7 +62,7 @@ public class TableRuleHelper {
                 throw new IllegalArgumentException(tableRule.getTarget() + " parse fail.");
             }
 
-            return tableRule.getProperty() + " " + relation + " " + value(min) + " AND " + value(max);
+            return tableRule.getField() + " " + relation + " " + value(min) + " AND " + value(max);
         }
         throw new IllegalArgumentException("cannot parse tableRule: " + tableRule);
     }
