@@ -3,6 +3,8 @@ package icu.cucurbit;
 import com.google.common.collect.Lists;
 import icu.cucurbit.sql.JdbcIndexAndParameters;
 import icu.cucurbit.sql.TableRule;
+import icu.cucurbit.sql.filter.FilterFactory;
+import icu.cucurbit.sql.filter.RuleFilter;
 import icu.cucurbit.sql.visitor.InjectCrudVisitor;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
@@ -13,6 +15,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.BlockJUnit4ClassRunner;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @RunWith(BlockJUnit4ClassRunner.class)
@@ -24,7 +27,10 @@ public class InjectUpdateTest {
 				new TableRule("county", "code", "=", "countyCode"),
 				new TableRule("city", "code", "in", Lists.newArrayList("1101", "1102"))
 		);
-		RuleContext.setRules(rules);
+		List<RuleFilter> filters = new ArrayList<>(rules.size());
+
+		rules.forEach(rule -> filters.add(FilterFactory.create(rule)));
+		FilterContext.setFilters(filters);
 	}
 
 

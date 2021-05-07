@@ -1,21 +1,21 @@
 package icu.cucurbit;
 
 
-import icu.cucurbit.sql.TableRule;
+import icu.cucurbit.sql.filter.RuleFilter;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class RuleContext {
+public class FilterContext {
 
-    private static final ThreadLocal<List<TableRule>> tableFilters =
+    private static final ThreadLocal<List<RuleFilter>> tableFilters =
             ThreadLocal.withInitial(ArrayList::new);
 
-    public static void setRules(List<TableRule> rules) {
+    public static void setFilters(List<RuleFilter> rules) {
         tableFilters.set(rules);
     }
 
-    public static List<TableRule> getRules() {
+    public static List<RuleFilter> getFilters() {
         return tableFilters.get();
     }
 

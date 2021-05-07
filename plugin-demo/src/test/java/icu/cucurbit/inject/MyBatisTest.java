@@ -1,10 +1,12 @@
 package icu.cucurbit.inject;
 
 import com.google.common.collect.Lists;
-import icu.cucurbit.RuleContext;
+import icu.cucurbit.FilterContext;
 import icu.cucurbit.inject.dao.UserDao;
 import icu.cucurbit.inject.entity.User;
 import icu.cucurbit.sql.TableRule;
+import icu.cucurbit.sql.filter.FilterFactory;
+import icu.cucurbit.sql.filter.RuleFilter;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -12,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -28,7 +31,10 @@ public class MyBatisTest {
                 new TableRule("users", "del_flag", "in", Arrays.asList(1, 2, 3, 4, 5, 0)),
                 new TableRule("users", "username", "=", "yuwen")
         );
-        RuleContext.setRules(rules);
+        List<RuleFilter> filters = new ArrayList<>(rules.size());
+
+        rules.forEach(rule -> filters.add(FilterFactory.create(rule)));
+        FilterContext.setFilters(filters);
     }
 
     @Test

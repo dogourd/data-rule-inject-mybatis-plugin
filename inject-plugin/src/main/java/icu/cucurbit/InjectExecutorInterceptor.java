@@ -1,7 +1,7 @@
 package icu.cucurbit;
 
 import icu.cucurbit.sql.JdbcIndexAndParameters;
-import icu.cucurbit.sql.TableRule;
+import icu.cucurbit.sql.filter.RuleFilter;
 import icu.cucurbit.sql.visitor.InjectCrudVisitor;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
@@ -51,14 +51,14 @@ public class InjectExecutorInterceptor implements Interceptor {
             boundSql = ms.getBoundSql(parameter);
         }
 
-        List<TableRule> rules = RuleContext.getRules();
+        List<RuleFilter> rules = FilterContext.getFilters();
         if (rules == null || rules.isEmpty()) {
             return invocation.proceed();
         }
 
         String sql = boundSql.getSql();
         Statement statement = CCJSqlParserUtil.parse(sql);
-        if (!shouldIntercept(statement) || RuleContext.getRules().isEmpty()) {
+        if (!shouldIntercept(statement) || FilterContext.getFilters().isEmpty()) {
             return invocation.proceed();
         }
 

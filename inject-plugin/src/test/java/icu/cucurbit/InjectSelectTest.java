@@ -2,6 +2,8 @@ package icu.cucurbit;
 
 import icu.cucurbit.sql.JdbcIndexAndParameters;
 import icu.cucurbit.sql.TableRule;
+import icu.cucurbit.sql.filter.FilterFactory;
+import icu.cucurbit.sql.filter.RuleFilter;
 import icu.cucurbit.sql.visitor.InjectCrudVisitor;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
@@ -25,7 +27,10 @@ public class InjectSelectTest {
         rules = new ArrayList<>();
         rules.add(new TableRule("users", "del_flag", "=", 0));
         rules.add(new TableRule("user_role", "id", "=", 0));
-        RuleContext.setRules(rules);
+        List<RuleFilter> filters = new ArrayList<>(rules.size());
+
+        rules.forEach(rule -> filters.add(FilterFactory.create(rule)));
+        FilterContext.setFilters(filters);
     }
 
     @Test

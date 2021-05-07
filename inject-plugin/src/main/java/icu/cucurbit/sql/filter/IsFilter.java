@@ -7,48 +7,39 @@ import icu.cucurbit.sql.TableRule;
 import java.util.*;
 import java.util.function.Supplier;
 
-public class LikeFilter extends RuleFilter {
+public class IsFilter extends RuleFilter {
 
-    public static final Set<String> LIKE_RELATIONS = Sets.newHashSet("LIKE", "NOT LIKE");
+    public static final Set<String> IS_RELATIONS = Sets.newHashSet("IS NULL", "IS NOT NULL");
 
     private final String field;
     private final String relation;
-    private final List<Object> jdbcParameters;
 
-    public LikeFilter(TableRule rule) {
+    public IsFilter(TableRule rule) {
         Objects.requireNonNull(rule);
         Objects.requireNonNull(rule.getTableName());
         Objects.requireNonNull(rule.getField());
         Objects.requireNonNull(rule.getRelation());
-        Objects.requireNonNull(rule.getTarget());
 
         this.filterTable = new FilterTable(rule.getTableName(), rule.getTableName());
         this.field = rule.getField();
         String relation = rule.getRelation().trim().toUpperCase();
-        if (!LIKE_RELATIONS.contains(relation)) {
-            throw new IllegalArgumentException("cannot create LikeFilter, relation [" + relation + "] not support.");
+        if (!IS_RELATIONS.contains(relation)) {
+            throw new IllegalArgumentException("cannot create IsFilter, relation [" + relation + "] not support.");
         }
         this.relation = relation;
-        Object target = rule.getTarget();
-        if (!(target instanceof String)) {
-            throw new IllegalArgumentException("LikeFilter require a String value, but got ["
-                    + target.getClass().getName() + "].");
-        }
-        this.jdbcParameters = new ArrayList<>();
-        jdbcParameters.add(target);
+        // ignore target.
     }
 
     @Override
     public String toSqlSnippet(FilterTable filterTable, Supplier<String> placeHolderSupplier) {
-        Objects.requireNonNull(placeHolderSupplier);
-
+        // ignore placeHolderSupplier.
         filterTable = Optional.ofNullable(filterTable).orElse(this.filterTable);
         String tableName = Optional.ofNullable(filterTable.getAlias()).orElse(filterTable.getName());
-        return tableName + "." + field + " " + relation + " " + placeHolderSupplier.get();
+        return tableName + "." + field + " " + relation + " NULL";
     }
 
     @Override
     public List<Object> getJdbcParameters() {
-        return jdbcParameters;
+        return Collections.emptyList();
     }
 }
