@@ -50,7 +50,7 @@ public class InjectUpdateTest {
 
 	@Test
 	public void testUpdateWithFromAndJoin() throws JSQLParserException {
-		String sql = "update county set code = ? from city join province on city.parent_code = province.code where county.parent_code = city.code";
+		String sql = "update county set code = ? from city join province on city.parent_code = province.code where county.parent_code = city.code or county.code = city.code";
 		String newSql = inject(sql);
 		System.out.println(newSql);
 //		Assert.assertEquals("UPDATE county SET code = '110001' FROM city JOIN province ON city.parent_code = province.code WHERE county.parent_code = city.code AND county.code = 'countyCode' AND city.code IN ('1101', '1102')", newSql);

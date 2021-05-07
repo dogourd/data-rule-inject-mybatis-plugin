@@ -9,7 +9,9 @@ import lombok.extern.slf4j.Slf4j;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
+import net.sf.jsqlparser.expression.operators.conditional.OrExpression;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.StatementVisitorAdapter;
@@ -156,7 +158,13 @@ public class InjectCrudVisitor extends StatementVisitorAdapter {
             return oldExpression;
         }
 
-        return oldExpression == null ? finalExpression : new AndExpression(oldExpression, finalExpression);
+        if (oldExpression == null) {
+            return finalExpression;
+        }
+        if (oldExpression instanceof OrExpression) {
+            return new AndExpression(new Parenthesis(oldExpression), finalExpression);
+        }
+        return new AndExpression(oldExpression, finalExpression);
     }
 
 
