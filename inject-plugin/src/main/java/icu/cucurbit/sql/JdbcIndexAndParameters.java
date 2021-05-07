@@ -1,7 +1,7 @@
 package icu.cucurbit.sql;
 
-import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class JdbcIndexAndParameters  {
@@ -13,12 +13,8 @@ public class JdbcIndexAndParameters  {
         index ++;
     }
 
-    public void addParameter(Object value) {
-        if (value instanceof Collection) {
-            ((Collection<?>) value).forEach(this::addSingleParameter);
-        } else {
-            addSingleParameter(value);
-        }
+    public void addParameter(List<Object> parameters) {
+        parameters.forEach(this::addSingleParameter);
     }
 
     public void addSingleParameter(Object value) {

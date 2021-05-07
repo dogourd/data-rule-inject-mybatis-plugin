@@ -1,11 +1,8 @@
 package icu.cucurbit.sql;
 
-import icu.cucurbit.TableRuleHelper;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.Objects;
 
 @Data
 @NoArgsConstructor
@@ -16,16 +13,4 @@ public class TableRule {
     private String field;
     private String relation;
     private Object target;
-
-
-    public String toExpressionString() {
-        Objects.requireNonNull(tableName);
-        Objects.requireNonNull(field);
-        Objects.requireNonNull(relation);
-        Objects.requireNonNull(target);
-
-
-        return tableName + "." + TableRuleHelper.toSql(this);
-    }
-
 }
