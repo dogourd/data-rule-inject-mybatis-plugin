@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:postgresql://127.0.0.1/inject?charset=utf-8
+    url: jdbc:postgresql://127.0.0.1:5432/inject?charset=utf-8
     driver-class-name: org.postgresql.Driver
     hikari:
       username: postgres

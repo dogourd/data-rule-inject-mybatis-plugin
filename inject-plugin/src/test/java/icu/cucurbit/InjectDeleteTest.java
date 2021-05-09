@@ -1,5 +1,8 @@
 package icu.cucurbit;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.google.common.collect.Lists;
 import icu.cucurbit.sql.JdbcIndexAndParameters;
 import icu.cucurbit.sql.TableRule;
@@ -14,9 +17,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.BlockJUnit4ClassRunner;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @RunWith(BlockJUnit4ClassRunner.class)
 public class InjectDeleteTest {
@@ -37,7 +37,7 @@ public class InjectDeleteTest {
     public void testSimpleDelete() throws JSQLParserException {
         String sql = "delete from county";
         String newSql = inject(sql);
-        Assert.assertEquals("DELETE FROM county WHERE county.code = 'countyCode'", newSql);
+        Assert.assertEquals("DELETE FROM county WHERE county.code = ?", newSql);
     }
 
     @Test

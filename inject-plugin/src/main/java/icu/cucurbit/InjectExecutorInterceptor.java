@@ -1,5 +1,10 @@
 package icu.cucurbit;
 
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Properties;
+
 import icu.cucurbit.sql.JdbcIndexAndParameters;
 import icu.cucurbit.sql.filter.RuleFilter;
 import icu.cucurbit.sql.visitor.InjectCrudVisitor;
@@ -14,17 +19,16 @@ import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.mapping.MappedStatement;
 import org.apache.ibatis.mapping.ParameterMapping;
 import org.apache.ibatis.mapping.SqlSource;
-import org.apache.ibatis.plugin.*;
+import org.apache.ibatis.plugin.Interceptor;
+import org.apache.ibatis.plugin.Intercepts;
+import org.apache.ibatis.plugin.Invocation;
+import org.apache.ibatis.plugin.Plugin;
+import org.apache.ibatis.plugin.Signature;
 import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Properties;
 
 @Intercepts({
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class}),
@@ -40,25 +44,18 @@ public class InjectExecutorInterceptor implements Interceptor {
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
         Object[] args = invocation.getArgs();
-        MappedStatement ms = (MappedStatement) args[0];
+        MappedStatement mappedStatement = (MappedStatement) args[0];
         // maybe null, maybe object, maybe MapperMethod$ParamMap,
-        Object parameter = args[1];
-
-        BoundSql boundSql;
-        if (args.length == 6) {
-            boundSql = (BoundSql) args[5];
-        } else {
-            boundSql = ms.getBoundSql(parameter);
-        }
-
+        Object parameterObject = args[1];
+        BoundSql boundSql = args.length == 6 ? (BoundSql) args[5] : mappedStatement.getBoundSql(parameterObject);
         List<RuleFilter> rules = FilterContext.getFilters();
-        if (rules == null || rules.isEmpty()) {
+        if (rules == null || rules.isEmpty()) { // 没有配置规则.
             return invocation.proceed();
         }
 
         String sql = boundSql.getSql();
         Statement statement = CCJSqlParserUtil.parse(sql);
-        if (!shouldIntercept(statement) || FilterContext.getFilters().isEmpty()) {
+        if (!shouldIntercept(statement)) {
             return invocation.proceed();
         }
 
@@ -66,22 +63,23 @@ public class InjectExecutorInterceptor implements Interceptor {
         JdbcIndexAndParameters parameterAdder = new JdbcIndexAndParameters();
         statement.accept(new InjectCrudVisitor(parameterAdder));
 
-        String newSql = statement.toString();
-        log.debug("inject sql finish. generated sql: {}", newSql);
+        String injectedSql = statement.toString();
+        log.debug("inject sql finish. new sql: {}", injectedSql);
 
-        BoundSql newBoundSql = copyBoundSql(newSql, ms.getConfiguration(), boundSql);
-        List<ParameterMapping> parameterMappings = newBoundSql.getParameterMappings();
+        BoundSql injectedBoundSql = copyBoundSql(injectedSql, mappedStatement.getConfiguration(), boundSql);
+        List<ParameterMapping> parameterMappings = injectedBoundSql.getParameterMappings();
         parameterAdder.getMapping().forEach((k, v) -> {
-            String key = "data_rule_" + k;
+        	// drp mean data rule parameter.
+            String key = "drp_" + k;
             ParameterMapping.Builder mappingBuilder = new ParameterMapping.Builder(
-                    ms.getConfiguration(), key , v.getClass()
+                    mappedStatement.getConfiguration(), key , v.getClass()
             );
             parameterMappings.add(k, mappingBuilder.build());
-            newBoundSql.setAdditionalParameter(key, v);
+            injectedBoundSql.setAdditionalParameter(key, v);
         });
 
-        String newMsId = ms.getId() + INJECT_SUFFIX;
-        MappedStatement newStatement = copyMappedStatement(ms, new DirectSqlSource(newBoundSql), newMsId);
+        String newMsId = mappedStatement.getId() + INJECT_SUFFIX;
+        MappedStatement newStatement = copyMappedStatement(mappedStatement, new DirectSqlSource(injectedBoundSql), newMsId);
         // 更换方法参数.
         args[0] = newStatement;
 

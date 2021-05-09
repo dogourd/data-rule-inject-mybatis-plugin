@@ -1,11 +1,13 @@
 package icu.cucurbit.inject.config;
 
-import icu.cucurbit.InjectExecutorInterceptor;
-import org.apache.ibatis.session.SqlSessionFactory;
-import org.springframework.context.annotation.Configuration;
+import java.util.List;
 
 import javax.annotation.PostConstruct;
-import java.util.List;
+
+import icu.cucurbit.InjectStatementInterceptor;
+import org.apache.ibatis.session.SqlSessionFactory;
+
+import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class MyBatisConfig {
@@ -19,10 +21,10 @@ public class MyBatisConfig {
 
     @PostConstruct
     public void addInterceptor() {
-        InjectExecutorInterceptor interceptor = new InjectExecutorInterceptor();
+//        InjectExecutorInterceptor interceptor = new InjectExecutorInterceptor();
+		InjectStatementInterceptor interceptor = new InjectStatementInterceptor();
         for (SqlSessionFactory sqlSessionFactory : sqlSessionFactories) {
             // 如果需要 pageHelper 在 InjectExecutorInterceptor 之前 add.
-
             sqlSessionFactory.getConfiguration().addInterceptor(interceptor);
         }
     }
